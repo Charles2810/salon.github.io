@@ -47,8 +47,14 @@ export default function UsuariosCRUD() {
   const title = useMemo(() => (editing ? 'Editar usuario' : 'Nuevo usuario'), [editing]);
 
   async function loadRoles() {
-    const res = await apiFetch<PagedResponse<RolAdmin>>(`/api/v1/admin/roles?page=1&pageSize=200`, { user });
-    setRoles(res.data);
+    try {
+      const res = await apiFetch<RolAdmin[] | PagedResponse<RolAdmin>>(`/api/v1/admin/roles`, { user });
+      // El endpoint retorna array directo
+      const arr = Array.isArray(res) ? res : (res as PagedResponse<RolAdmin>).data ?? [];
+      setRoles(arr);
+    } catch {
+      setRoles([]);
+    }
   }
 
   async function load() {

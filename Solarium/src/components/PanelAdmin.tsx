@@ -7,6 +7,8 @@ import ClientesCRUD from './admin/ClientesCRUD';
 import UsuariosCRUD from './admin/UsuariosCRUD';
 import ReservasCRUD from './admin/ReservasCRUD';
 import BitacoraDashboard from './admin/BitacoraDashboard';
+import StoredProcedures from './admin/StoredProcedures';
+import ModuloReportes from './admin/ModuloReportes';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
@@ -36,7 +38,7 @@ export default function PanelAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<
-    'hoy' | 'categorias' | 'servicios' | 'clientes' | 'usuarios' | 'reservas' | 'bitacora'
+    'hoy' | 'categorias' | 'servicios' | 'clientes' | 'usuarios' | 'reservas' | 'bitacora' | 'sps' | 'reportes'
   >('hoy');
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export default function PanelAdmin() {
               ['clientes', 'Clientes'],
               ['usuarios', 'Usuarios'],
               ['reservas', 'Reservas/Trabajos/Pagos'],
-              ['bitacora', 'Bitácora'],
+              ...(user?.rol === 'ADMIN' ? [['bitacora', 'Bitácora'], ['sps', 'Procedimientos'], ['reportes', 'Reportes']] : []),
             ] as const
           ).map(([k, label]) => (
             <button
@@ -176,6 +178,8 @@ export default function PanelAdmin() {
         {tab === 'usuarios' ? <UsuariosCRUD /> : null}
         {tab === 'reservas' ? <ReservasCRUD /> : null}
         {tab === 'bitacora' ? <BitacoraDashboard /> : null}
+        {tab === 'sps' ? <StoredProcedures /> : null}
+        {tab === 'reportes' ? <ModuloReportes /> : null}
       </main>
     </div>
   );

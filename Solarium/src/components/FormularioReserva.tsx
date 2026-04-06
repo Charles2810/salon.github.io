@@ -10,6 +10,30 @@ const INITIAL: FormularioReservaData = {
   id_servicio: '', id_empleado: '', fecha_reserva: '', hora_reserva: '',
 };
 
+const WHATSAPP_NUMBER = '59178002997'; // +591 78002997
+
+function abrirWhatsApp(form: FormularioReservaData, idReserva: number | null, servicios: { id_servicio: number; nombre: string }[], empleados: { id_empleado: number; nombre: string; apellido: string }[]) {
+  const servicio = servicios.find(s => s.id_servicio === Number(form.id_servicio));
+  const empleado = empleados.find(e => e.id_empleado === Number(form.id_empleado));
+
+  const mensaje = [
+    `✨ *Nueva Reserva — SOLARIUM*`,
+    ``,
+    `👤 *Cliente:* ${form.nombre} ${form.apellido}`,
+    `📞 *Teléfono:* ${form.telefono}`,
+    `📧 *Email:* ${form.email}`,
+    ``,
+    `💇 *Servicio:* ${servicio?.nombre ?? form.id_servicio}`,
+    `👩‍🎨 *Estilista:* ${empleado ? `${empleado.nombre} ${empleado.apellido}` : form.id_empleado}`,
+    `📅 *Fecha:* ${form.fecha_reserva}`,
+    `🕐 *Hora:* ${form.hora_reserva}`,
+    ...(idReserva ? [``, `🔖 *Reserva #${idReserva}*`] : []),
+  ].join('\n');
+
+  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
+  window.open(url, '_blank');
+}
+
 export default function FormularioReserva() {
   const { data: servicios } = useServicios();
   const { data: empleados } = useEmpleados();
@@ -40,6 +64,7 @@ export default function FormularioReserva() {
         setApiError(data.error || 'Error al agendar la cita');
       } else {
         setExito(data as ReservaCreada);
+        abrirWhatsApp(form, (data as ReservaCreada).id_trabajo ?? null, servicios, empleados);
         setForm(INITIAL);
       }
     } catch {

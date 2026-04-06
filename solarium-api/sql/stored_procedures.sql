@@ -1,0 +1,315 @@
+USE [DB_TiendaBelleza];
+GO
+
+/* ================================================================
+   STORED PROCEDURES DE REPORTES
+   Sin SET NOCOUNT ON, con CURSOR, PRINT y acumuladores
+================================================================ */
+
+-- sp_ReporteReservas
+CREATE OR ALTER PROCEDURE sp_ReporteReservas
+  @FECHA_INICIO DATE,
+  @FECHA_FIN    DATE
+AS
+BEGIN
+  DECLARE @FECHA     AS VARCHAR(20)
+  DECLARE @HORA      AS VARCHAR(10)
+  DECLARE @CLIENTE   AS VARCHAR(60)
+  DECLARE @SERVICIO  AS VARCHAR(50)
+  DECLARE @USUARIO   AS VARCHAR(60)
+  DECLARE @ESTADO    AS VARCHAR(20)
+  DECLARE @NUM       AS INT
+  DECLARE @PENDIENTE AS INT
+  DECLARE @CONFIRM   AS INT
+  DECLARE @CANCELADO AS INT
+
+  SET @NUM       = 0
+  SET @PENDIENTE = 0
+  SET @CONFIRM   = 0
+  SET @CANCELADO = 0
+
+  PRINT ''
+  PRINT 'Salon de Belleza SOLARIUM — ' + CONVERT(VARCHAR(20), GETDATE(), 120)
+  PRINT '------------------------------------------------------------'
+  PRINT '  REPORTE DE RESERVAS'
+  PRINT '  Periodo: ' + CONVERT(VARCHAR, @FECHA_INICIO, 23) + ' al ' + CONVERT(VARCHAR, @FECHA_FIN, 23)
+  PRINT '------------------------------------------------------------'
+  PRINT 'NRO.  FECHA       HORA   CLIENTE              SERVICIO         ATIENDE              ESTADO    '
+  PRINT '------------------------------------------------------------'
+
+  DECLARE CUR_RESERVAS CURSOR FOR
+    SELECT
+      CONVERT(VARCHAR(10), r.FECHA_RESERVA, 23),
+      CONVERT(VARCHAR(8),  r.HORA_RESERVA,  8),
+      c.NOMBRE + ' ' + c.APELLIDO,
+      s.NOMBRE,
+      u.NOMBRE + ' ' + u.APELLIDO,
+      r.ESTADO
+    FROM RESERVAS r
+    JOIN CLIENTES  c ON r.ID_CLIENTE  = c.ID_CLIENTE
+    JOIN SERVICIOS s ON r.ID_SERVICIO = s.ID_SERVICIO
+    JOIN USUARIOS  u ON r.ID_USUARIO  = u.ID_USUARIO
+    WHERE r.FECHA_RESERVA BETWEEN @FECHA_INICIO AND @FECHA_FIN
+    ORDER BY r.FECHA_RESERVA, r.HORA_RESERVA
+
+  OPEN CUR_RESERVAS
+  FETCH NEXT FROM CUR_RESERVAS INTO @FECHA, @HORA, @CLIENTE, @SERVICIO, @USUARIO, @ESTADO
+
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+    SET @NUM = @NUM + 1
+    IF @ESTADO = 'PENDIENTE'   SET @PENDIENTE = @PENDIENTE + 1
+    IF @ESTADO = 'CONFIRMADO'  SET @CONFIRM   = @CONFIRM   + 1
+    IF @ESTADO = 'CANCELADO'   SET @CANCELADO = @CANCELADO + 1
+
+    PRINT CONVERT(CHAR(5),  @NUM)      +
+          CONVERT(CHAR(12), @FECHA)    +
+          CONVERT(CHAR(7),  @HORA)     +
+          CONVERT(CHAR(22), @CLIENTE)  +
+          CONVERT(CHAR(18), @SERVICIO) +
+          CONVERT(CHAR(22), @USUARIO)  +
+          CONVERT(CHAR(12), @ESTADO)
+
+    FETCH NEXT FROM CUR_RESERVAS INTO @FECHA, @HORA, @CLIENTE, @SERVICIO, @USUARIO, @ESTADO
+  END
+
+  PRINT '------------------------------------------------------------'
+  PRINT '  TOTAL RESERVAS : ' + CONVERT(CHAR(5), @NUM)
+  PRINT '  PENDIENTES     : ' + CONVERT(CHAR(5), @PENDIENTE)
+  PRINT '  CONFIRMADAS    : ' + CONVERT(CHAR(5), @CONFIRM)
+  PRINT '  CANCELADAS     : ' + CONVERT(CHAR(5), @CANCELADO)
+
+  CLOSE CUR_RESERVAS
+  DEALLOCATE CUR_RESERVAS
+END
+GO
+
+-- sp_ReporteUsuarios
+CREATE OR ALTER PROCEDURE sp_ReporteUsuarios
+  @ID_ROL INT = 0
+AS
+BEGIN
+  DECLARE @NOMBRE_COMPLETO AS VARCHAR(100)
+  DECLARE @ROL             AS VARCHAR(50)
+  DECLARE @ESPECIALIDAD    AS VARCHAR(100)
+  DECLARE @ESTADO          AS VARCHAR(20)
+  DECLARE @FECHA_INGRESO   AS VARCHAR(20)
+  DECLARE @NUM             AS INT
+  DECLARE @ACTIVOS         AS INT
+  DECLARE @INACTIVOS       AS INT
+
+  SET @NUM       = 0
+  SET @ACTIVOS   = 0
+  SET @INACTIVOS = 0
+
+  PRINT ''
+  PRINT 'Salon de Belleza SOLARIUM — ' + CONVERT(VARCHAR(20), GETDATE(), 120)
+  PRINT '------------------------------------------------------------'
+  PRINT '  REPORTE DE USUARIOS'
+  PRINT '------------------------------------------------------------'
+  PRINT 'NRO.  NOMBRE COMPLETO        ROL              ESPECIALIDAD         ESTADO    INGRESO   '
+  PRINT '------------------------------------------------------------'
+
+  DECLARE CUR_USUARIOS CURSOR FOR
+    SELECT
+      u.NOMBRE + ' ' + u.APELLIDO,
+      r.NOMBRE,
+      ISNULL(u.ESPECIALIDAD, '—'),
+      u.ESTADO,
+      CONVERT(VARCHAR(10), u.FECHA_INGRESO, 23)
+    FROM USUARIOS u
+    JOIN ROLES r ON u.ID_ROL = r.ID_ROL
+    WHERE (@ID_ROL = 0 OR u.ID_ROL = @ID_ROL)
+    ORDER BY r.NOMBRE, u.NOMBRE
+
+  OPEN CUR_USUARIOS
+  FETCH NEXT FROM CUR_USUARIOS INTO @NOMBRE_COMPLETO, @ROL, @ESPECIALIDAD, @ESTADO, @FECHA_INGRESO
+
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+    SET @NUM = @NUM + 1
+    IF @ESTADO = 'ACTIVO'   SET @ACTIVOS   = @ACTIVOS   + 1
+    IF @ESTADO = 'INACTIVO' SET @INACTIVOS = @INACTIVOS + 1
+
+    PRINT CONVERT(CHAR(5),  @NUM)             +
+          CONVERT(CHAR(22), @NOMBRE_COMPLETO) +
+          CONVERT(CHAR(17), @ROL)             +
+          CONVERT(CHAR(22), @ESPECIALIDAD)    +
+          CONVERT(CHAR(11), @ESTADO)          +
+          CONVERT(CHAR(12), @FECHA_INGRESO)
+
+    FETCH NEXT FROM CUR_USUARIOS INTO @NOMBRE_COMPLETO, @ROL, @ESPECIALIDAD, @ESTADO, @FECHA_INGRESO
+  END
+
+  PRINT '------------------------------------------------------------'
+  PRINT '  TOTAL USUARIOS : ' + CONVERT(CHAR(5), @NUM)
+  PRINT '  ACTIVOS        : ' + CONVERT(CHAR(5), @ACTIVOS)
+  PRINT '  INACTIVOS      : ' + CONVERT(CHAR(5), @INACTIVOS)
+
+  CLOSE CUR_USUARIOS
+  DEALLOCATE CUR_USUARIOS
+END
+GO
+
+-- sp_ReportePagos
+CREATE OR ALTER PROCEDURE sp_ReportePagos
+  @FECHA_INICIO DATE,
+  @FECHA_FIN    DATE
+AS
+BEGIN
+  DECLARE @FECHA_PAGO    AS VARCHAR(20)
+  DECLARE @CLIENTE       AS VARCHAR(60)
+  DECLARE @SERVICIO      AS VARCHAR(50)
+  DECLARE @MONTO         AS DECIMAL(10,2)
+  DECLARE @METODO        AS VARCHAR(30)
+  DECLARE @ESTADO        AS VARCHAR(20)
+  DECLARE @NUM           AS INT
+  DECLARE @TOTAL         AS DECIMAL(10,2)
+  DECLARE @EFECTIVO      AS DECIMAL(10,2)
+  DECLARE @QR            AS DECIMAL(10,2)
+  DECLARE @TARJETA       AS DECIMAL(10,2)
+  DECLARE @TRANSFERENCIA AS DECIMAL(10,2)
+
+  SET @NUM           = 0
+  SET @TOTAL         = 0
+  SET @EFECTIVO      = 0
+  SET @QR            = 0
+  SET @TARJETA       = 0
+  SET @TRANSFERENCIA = 0
+
+  PRINT ''
+  PRINT 'Salon de Belleza SOLARIUM — ' + CONVERT(VARCHAR(20), GETDATE(), 120)
+  PRINT '------------------------------------------------------------'
+  PRINT '  REPORTE DE PAGOS'
+  PRINT '  Periodo: ' + CONVERT(VARCHAR, @FECHA_INICIO, 23) + ' al ' + CONVERT(VARCHAR, @FECHA_FIN, 23)
+  PRINT '------------------------------------------------------------'
+  PRINT 'NRO.  FECHA PAGO  CLIENTE              SERVICIO         MONTO      METODO         ESTADO    '
+  PRINT '------------------------------------------------------------'
+
+  DECLARE CUR_PAGOS CURSOR FOR
+    SELECT
+      CONVERT(VARCHAR(10), p.FECHA_PAGO, 23),
+      c.NOMBRE + ' ' + c.APELLIDO,
+      s.NOMBRE,
+      p.MONTO,
+      p.METODO_PAGO,
+      p.ESTADO
+    FROM PAGOS p
+    JOIN TRABAJOS t  ON p.ID_TRABAJO  = t.ID_TRABAJO
+    JOIN RESERVAS r  ON t.ID_RESERVA  = r.ID_RESERVA
+    JOIN CLIENTES c  ON r.ID_CLIENTE  = c.ID_CLIENTE
+    JOIN SERVICIOS s ON r.ID_SERVICIO = s.ID_SERVICIO
+    WHERE CAST(p.FECHA_PAGO AS DATE) BETWEEN @FECHA_INICIO AND @FECHA_FIN
+    ORDER BY p.FECHA_PAGO
+
+  OPEN CUR_PAGOS
+  FETCH NEXT FROM CUR_PAGOS INTO @FECHA_PAGO, @CLIENTE, @SERVICIO, @MONTO, @METODO, @ESTADO
+
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+    SET @NUM   = @NUM + 1
+    SET @TOTAL = @TOTAL + @MONTO
+    IF @METODO = 'EFECTIVO'      SET @EFECTIVO      = @EFECTIVO      + @MONTO
+    IF @METODO = 'QR'            SET @QR            = @QR            + @MONTO
+    IF @METODO = 'TARJETA'       SET @TARJETA       = @TARJETA       + @MONTO
+    IF @METODO = 'TRANSFERENCIA' SET @TRANSFERENCIA = @TRANSFERENCIA + @MONTO
+
+    PRINT CONVERT(CHAR(5),  @NUM)        +
+          CONVERT(CHAR(12), @FECHA_PAGO) +
+          CONVERT(CHAR(22), @CLIENTE)    +
+          CONVERT(CHAR(18), @SERVICIO)   +
+          CONVERT(CHAR(11), @MONTO)      +
+          CONVERT(CHAR(16), @METODO)     +
+          CONVERT(CHAR(12), @ESTADO)
+
+    FETCH NEXT FROM CUR_PAGOS INTO @FECHA_PAGO, @CLIENTE, @SERVICIO, @MONTO, @METODO, @ESTADO
+  END
+
+  PRINT '------------------------------------------------------------'
+  PRINT '  TOTAL RECAUDADO  : Bs. ' + CONVERT(CHAR(12), @TOTAL)
+  PRINT '  EFECTIVO         : Bs. ' + CONVERT(CHAR(12), @EFECTIVO)
+  PRINT '  QR               : Bs. ' + CONVERT(CHAR(12), @QR)
+  PRINT '  TARJETA          : Bs. ' + CONVERT(CHAR(12), @TARJETA)
+  PRINT '  TRANSFERENCIA    : Bs. ' + CONVERT(CHAR(12), @TRANSFERENCIA)
+  PRINT '  REGISTROS        : ' + CONVERT(CHAR(5), @NUM)
+
+  CLOSE CUR_PAGOS
+  DEALLOCATE CUR_PAGOS
+END
+GO
+
+-- sp_ReporteServicios
+CREATE OR ALTER PROCEDURE sp_ReporteServicios
+  @ID_CATEGORIA INT = 0
+AS
+BEGIN
+  DECLARE @SERVICIO    AS VARCHAR(100)
+  DECLARE @CATEGORIA   AS VARCHAR(100)
+  DECLARE @PRECIO      AS DECIMAL(10,2)
+  DECLARE @DURACION    AS INT
+  DECLARE @ESTADO      AS VARCHAR(20)
+  DECLARE @VECES       AS INT
+  DECLARE @NUM         AS INT
+  DECLARE @ACTIVOS     AS INT
+  DECLARE @SUMA_PRECIO AS DECIMAL(10,2)
+
+  SET @NUM         = 0
+  SET @ACTIVOS     = 0
+  SET @SUMA_PRECIO = 0
+
+  PRINT ''
+  PRINT 'Salon de Belleza SOLARIUM — ' + CONVERT(VARCHAR(20), GETDATE(), 120)
+  PRINT '------------------------------------------------------------'
+  PRINT '  REPORTE DE SERVICIOS'
+  PRINT '------------------------------------------------------------'
+  PRINT 'NRO.  SERVICIO              CATEGORIA        PRECIO     DUR.  ESTADO    RESERVADO'
+  PRINT '------------------------------------------------------------'
+
+  DECLARE CUR_SERVICIOS CURSOR FOR
+    SELECT
+      s.NOMBRE,
+      c.NOMBRE,
+      s.PRECIO,
+      ISNULL(s.DURACION_MINUTOS, 0),
+      s.ESTADO,
+      (SELECT COUNT(*) FROM RESERVAS r WHERE r.ID_SERVICIO = s.ID_SERVICIO)
+    FROM SERVICIOS s
+    JOIN CATEGORIAS c ON s.ID_CATEGORIA = c.ID_CATEGORIA
+    WHERE (@ID_CATEGORIA = 0 OR s.ID_CATEGORIA = @ID_CATEGORIA)
+    ORDER BY c.NOMBRE, s.NOMBRE
+
+  OPEN CUR_SERVICIOS
+  FETCH NEXT FROM CUR_SERVICIOS INTO @SERVICIO, @CATEGORIA, @PRECIO, @DURACION, @ESTADO, @VECES
+
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+    SET @NUM = @NUM + 1
+    IF @ESTADO = 'ACTIVO'
+    BEGIN
+      SET @ACTIVOS     = @ACTIVOS + 1
+      SET @SUMA_PRECIO = @SUMA_PRECIO + @PRECIO
+    END
+
+    PRINT CONVERT(CHAR(5),  @NUM)       +
+          CONVERT(CHAR(22), @SERVICIO)  +
+          CONVERT(CHAR(17), @CATEGORIA) +
+          CONVERT(CHAR(11), @PRECIO)    +
+          CONVERT(CHAR(6),  @DURACION)  +
+          CONVERT(CHAR(11), @ESTADO)    +
+          CONVERT(CHAR(8),  @VECES)
+
+    FETCH NEXT FROM CUR_SERVICIOS INTO @SERVICIO, @CATEGORIA, @PRECIO, @DURACION, @ESTADO, @VECES
+  END
+
+  PRINT '------------------------------------------------------------'
+  PRINT '  TOTAL SERVICIOS : ' + CONVERT(CHAR(5), @NUM)
+  PRINT '  ACTIVOS         : ' + CONVERT(CHAR(5), @ACTIVOS)
+  PRINT '  PRECIO PROMEDIO : Bs. ' +
+    CONVERT(CHAR(10), CASE WHEN @ACTIVOS > 0 THEN @SUMA_PRECIO / @ACTIVOS ELSE 0 END)
+
+  CLOSE CUR_SERVICIOS
+  DEALLOCATE CUR_SERVICIOS
+END
+GO
+
+PRINT '✅ Stored Procedures de reportes aplicados correctamente.';

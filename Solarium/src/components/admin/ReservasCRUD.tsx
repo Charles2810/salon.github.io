@@ -120,7 +120,7 @@ export default function ReservasCRUD() {
         page: String(page),
         pageSize: String(pageSize),
       });
-      const res = await apiFetch<PagedResponse<ReservaRow>>(`/api/v1/admin/reservas?${params.toString()}`, { user });
+      const res = await apiFetch<PagedResponse<ReservaRow>>(`/api/v1/admin/reservas-admin?${params.toString()}`, { user });
       setData(res.data);
       setTotal(res.total);
     } catch (e) {
