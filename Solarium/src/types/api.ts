@@ -3,6 +3,7 @@ export type Servicio = {
   nombre: string;
   descripcion: string | null;
   duracion_min: number;
+  duracion_minutos: number;
   precio: number;
   categoria: string;
 };
@@ -35,4 +36,39 @@ export type EstadoReserva =
 export type ReservaCreada = {
   id_trabajo: number;
   mensaje: string;
+};
+
+export type AuthUser = {
+  id_usuario: number;
+  nombre: string;
+  apellido: string;
+  rol: string;
+  especialidad: string | null;
+  token: string;
+};
+
+export type AuthContextValue = {
+  user: AuthUser | null;
+  login: (user: AuthUser) => void;
+  logout: () => void;
+};
+
+export type LoginResponse = {
+  token: string;
+  id_usuario: number;
+  nombre: string;
+  apellido: string;
+  rol: string;
+  especialidad: string | null;
+};
+
+export type ReservaAdmin = {
+  id_reserva: number;
+  cliente: string;
+  servicio: string;
+  empleado: string;
+  fecha_reserva: string;
+  hora_reserva: string;
+  estado: string;
+  observacion: string | null;
 };

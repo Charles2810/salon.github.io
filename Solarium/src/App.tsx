@@ -1,3 +1,6 @@
+import { AuthProvider, useAuth } from './context/AuthContext'
+import PanelAdmin from './components/PanelAdmin'
+import VistaReserva from './components/VistaReserva'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import SeccionServicios from './components/SeccionServicios'
@@ -8,7 +11,19 @@ import FormularioReserva from './components/FormularioReserva'
 import Contacto from './components/Contacto'
 import BotonReservaFijo from './components/BotonReservaFijo'
 
-function App() {
+const ROLES_ADMIN = ['ADMIN', 'ESTILISTA', 'MANICURISTA', 'RECEPCIONISTA', 'EMPLEADO']
+
+function AppContent() {
+  const { user } = useAuth()
+
+  if (user && ROLES_ADMIN.includes(user.rol)) {
+    return <PanelAdmin />
+  }
+
+  if (user) {
+    return <VistaReserva />
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -27,6 +42,14 @@ function App() {
       </footer>
       <BotonReservaFijo />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 

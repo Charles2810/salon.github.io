@@ -79,3 +79,42 @@ export interface ApiError {
 export interface ApiSuccess<T> {
   data: T;
 }
+
+export interface UsuarioAuth {
+  id_usuario: number;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  usuario: string;
+  password: string;          // hash bcrypt
+  especialidad: string | null;
+  estado: string;
+  rol: string;               // nombre del rol desde JOIN con ROLES
+}
+
+export interface JwtPayload {
+  id_usuario: number;
+  rol: string;
+  iat?: number;
+  exp?: number;
+}
+
+export interface LoginResponse {
+  token: string;
+  id_usuario: number;
+  nombre: string;
+  apellido: string;
+  rol: string;
+  especialidad: string | null;
+}
+
+export interface ReservaAdmin {
+  id_reserva: number;
+  cliente: string;
+  servicio: string;
+  empleado: string;
+  fecha_reserva: string;
+  hora_reserva: string;
+  estado: string;
+  observacion: string | null;
+}

@@ -3,11 +3,11 @@ import sql from 'mssql';
 const config: sql.config = {
   server: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '1433'),
-  database: process.env.DB_NAME || 'SalonBelleza',
+  database: process.env.DB_NAME || 'DB_TiendaBelleza',
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   options: {
-    encrypt: true,
+    encrypt: false,
     trustServerCertificate: true,
   },
   pool: {
