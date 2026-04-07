@@ -27,6 +27,7 @@ const config: sql.config = {
   options: {
     encrypt: false,
     trustServerCertificate: true,
+    enableArithAbort: true,
     ...(effectiveInstanceName ? { instanceName: effectiveInstanceName } : {}),
   },
   pool: {

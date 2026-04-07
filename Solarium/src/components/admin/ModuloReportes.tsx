@@ -75,12 +75,22 @@ export default function ModuloReportes() {
   useEffect(() => {
     apiFetch<{ data: { id_rol: number; nombre: string }[] }>('/api/v1/admin/usuarios?page=1&pageSize=1', { user })
       .catch(() => null);
-    // Roles
+    // Roles — deduplicar por id_rol
     apiFetch<{ id_rol: number; nombre: string }[]>('/api/v1/admin/roles', { user })
-      .then(setURoles).catch(() => {});
-    // Categorías
+      .then(r => {
+        const unicos = r.filter((rol, i, arr) =>
+          arr.findIndex(x => x.id_rol === rol.id_rol) === i
+        );
+        setURoles(unicos);
+      }).catch(() => {});
+    // Categorías — deduplicar por id_categoria
     apiFetch<{ data: { id_categoria: number; nombre: string }[] }>('/api/v1/admin/categorias?page=1&pageSize=100', { user })
-      .then(r => setSCategorias(r.data)).catch(() => {});
+      .then(r => {
+        const unicas = r.data.filter((c, i, arr) =>
+          arr.findIndex(x => x.id_categoria === c.id_categoria) === i
+        );
+        setSCategorias(unicas);
+      }).catch(() => {});
   }, []); // eslint-disable-line
 
   async function generarReservas() {

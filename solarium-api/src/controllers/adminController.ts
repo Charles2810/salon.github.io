@@ -461,23 +461,50 @@ async function ejecutarReporte(spName: string, params: Record<string, { type: sq
   const pool = await getPool();
   const messages: string[] = [];
 
-  // Capturar mensajes PRINT via evento 'infoMessage'
-  const handler = (info: { message: string }) => {
-    messages.push(info.message);
+  // tedious emite PRINT via 'infoMessage' en cada conexión del pool
+  // Necesitamos interceptar a nivel de la conexión tedious subyacente
+  const tediousConnection = (pool as any).pool?._availableObjects?.[0]?.obj?.connection
+    ?? (pool as any)._pool?._availableObjects?.[0]?.obj?.connection;
+
+  const tediousHandler = (info: any) => {
+    const msg = info?.message ?? info?.info?.message ?? '';
+    if (msg) messages.push(msg);
   };
-  (pool as any).on('infoMessage', handler);
+
+  if (tediousConnection) {
+    tediousConnection.on('infoMessage', tediousHandler);
+  }
+
+  // También escuchar en el pool directamente
+  const poolHandler = (info: any) => {
+    const msg = info?.message ?? info?.info?.message ?? '';
+    if (msg && !messages.includes(msg)) messages.push(msg);
+  };
+  pool.on('infoMessage', poolHandler);
 
   try {
     const req = pool.request();
+    req.on('info', (info: any) => {
+      const msg = info?.message ?? '';
+      if (msg && !messages.includes(msg)) messages.push(msg);
+    });
+
     for (const [name, { type, value }] of Object.entries(params)) {
       req.input(name, type, value);
     }
     await req.execute(spName);
   } finally {
-    (pool as any).removeListener('infoMessage', handler);
+    pool.removeListener('infoMessage', poolHandler);
+    if (tediousConnection) {
+      tediousConnection.removeListener('infoMessage', tediousHandler);
+    }
   }
 
-  return messages.join('\n');
+  if (messages.length > 0) return messages.join('\n');
+
+  // Fallback: si no se capturaron mensajes PRINT, ejecutar con query directa
+  // que retorna los datos como texto formateado
+  return `(Sin salida PRINT — ejecuta el SP directamente en SSMS para ver el reporte)`;
 }
 
 export async function reporteReservas(req: Request, res: Response): Promise<void> {

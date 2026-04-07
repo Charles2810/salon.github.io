@@ -70,7 +70,7 @@ export default function SeccionServicios() {
                   Bs. {Number(s.precio).toFixed(2)}
                 </p>
                 <span className="text-sm" style={{ color: 'var(--color-gris-suave)' }}>
-                  {s.duracion_min} min
+                  {s.duracion_minutos ?? s.duracion_min} min
                 </span>
               </div>
             </div>
