@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import PanelAdmin from './components/PanelAdmin'
 import VistaReserva from './components/VistaReserva'
@@ -15,23 +16,25 @@ const ROLES_ADMIN = ['ADMIN', 'ESTILISTA', 'MANICURISTA', 'RECEPCIONISTA', 'EMPL
 
 function AppContent() {
   const { user } = useAuth()
+  const [viendoSitio, setViendoSitio] = useState(false)
 
-  if (user && ROLES_ADMIN.includes(user.rol)) {
-    return <PanelAdmin />
+  const esAdmin = user && ROLES_ADMIN.includes(user.rol)
+
+  if (esAdmin && !viendoSitio) {
+    return <PanelAdmin onVerSitio={() => setViendoSitio(true)} />
   }
 
-  if (user) {
+  if (user && !esAdmin) {
     return <VistaReserva />
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      <Navbar onVolverPanel={esAdmin && viendoSitio ? () => setViendoSitio(false) : undefined} />
       <Hero />
       <SeccionServicios />
       <Galeria />
       <SeccionEquipo />
-      <SeccionTestimonios />
       <FormularioReserva />
       <Contacto />
       <footer

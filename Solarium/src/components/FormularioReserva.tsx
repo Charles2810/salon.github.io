@@ -1,148 +1,101 @@
-import { useState } from 'react';
-import { useServicios } from '../hooks/useServicios';
-import { useEmpleados } from '../hooks/useEmpleados';
-import type { FormularioReservaData, ReservaCreada } from '../types/api';
+const WHATSAPP_NUMBER = '59176682297';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const SERVICIOS_POPULARES = [
+  'Corte y peinado',
+  'Tinte y coloración',
+  'Tratamiento capilar',
+  'Manicure y pedicure',
+  'Maquillaje profesional',
+];
 
-const INITIAL: FormularioReservaData = {
-  nombre: '', apellido: '', email: '', telefono: '',
-  id_servicio: '', id_empleado: '', fecha_reserva: '', hora_reserva: '',
-};
+function buildWhatsAppUrl(servicio?: string) {
+  const mensaje = servicio
+    ? [
+        `Hola, me comunico desde el sitio web de *SOLARIUM* 💛`,
+        ``,
+        `Me gustaría agendar una cita para el servicio de *${servicio}*.`,
+        ``,
+        `¿Podrían indicarme disponibilidad y precios? Muchas gracias 🙏`,
+      ].join('\n')
+    : [
+        `Hola, me comunico desde el sitio web de *SOLARIUM* 💛`,
+        ``,
+        `Me gustaría obtener información sobre sus servicios y agendar una cita.`,
+        ``,
+        `¿Podrían ayudarme? Muchas gracias 🙏`,
+      ].join('\n');
 
-const WHATSAPP_NUMBER = '59178002997'; // +591 78002997
-
-function abrirWhatsApp(form: FormularioReservaData, idReserva: number | null, servicios: { id_servicio: number; nombre: string }[], empleados: { id_empleado: number; nombre: string; apellido: string }[]) {
-  const servicio = servicios.find(s => s.id_servicio === Number(form.id_servicio));
-  const empleado = empleados.find(e => e.id_empleado === Number(form.id_empleado));
-
-  const mensaje = [
-    `✨ *Nueva Reserva — SOLARIUM*`,
-    ``,
-    `👤 *Cliente:* ${form.nombre} ${form.apellido}`,
-    `📞 *Teléfono:* ${form.telefono}`,
-    `📧 *Email:* ${form.email}`,
-    ``,
-    `💇 *Servicio:* ${servicio?.nombre ?? form.id_servicio}`,
-    `👩‍🎨 *Estilista:* ${empleado ? `${empleado.nombre} ${empleado.apellido}` : form.id_empleado}`,
-    `📅 *Fecha:* ${form.fecha_reserva}`,
-    `🕐 *Hora:* ${form.hora_reserva}`,
-    ...(idReserva ? [``, `🔖 *Reserva #${idReserva}*`] : []),
-  ].join('\n');
-
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, '_blank');
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`;
 }
 
 export default function FormularioReserva() {
-  const { data: servicios } = useServicios();
-  const { data: empleados } = useEmpleados();
-  const [form, setForm] = useState<FormularioReservaData>(INITIAL);
-  const [submitting, setSubmitting] = useState(false);
-  const [exito, setExito] = useState<ReservaCreada | null>(null);
-  const [apiError, setApiError] = useState<string | null>(null);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setApiError(null);
-    setExito(null);
-
-    try {
-      const res = await fetch(`${API_URL}/api/v1/reservas`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setApiError(data.error || 'Error al agendar la cita');
-      } else {
-        setExito(data as ReservaCreada);
-        abrirWhatsApp(form, (data as ReservaCreada).id_trabajo ?? null, servicios, empleados);
-        setForm(INITIAL);
-      }
-    } catch {
-      setApiError('No se pudo conectar con el servidor. Intenta de nuevo.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const inputClass = "w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 transition-all bg-white";
-  const focusStyle = { '--tw-ring-color': 'var(--color-dorado)' } as React.CSSProperties;
-
   return (
     <section id="booking" className="py-28" style={{ background: 'var(--color-marfil)' }}>
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <p className="text-sm uppercase tracking-widest mb-3" style={{ color: 'var(--color-dorado)' }}>
-            Agenda tu visita
+      <div className="max-w-2xl mx-auto px-4 text-center">
+
+        <p className="text-sm uppercase tracking-widest mb-3" style={{ color: 'var(--color-dorado)' }}>
+          Agenda tu visita
+        </p>
+        <h3
+          className="text-5xl font-bold mb-4"
+          style={{ fontFamily: "'Playfair Display', serif", color: 'var(--color-negro)' }}
+        >
+          Reserva tu Cita
+        </h3>
+        <p className="text-lg mb-10" style={{ color: 'var(--color-gris-suave)' }}>
+          Escríbenos por WhatsApp y una de nuestras especialistas te atenderá personalmente para coordinar tu cita.
+        </p>
+
+        {/* Botón principal */}
+        <a
+          href={buildWhatsAppUrl()}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl mb-12"
+          style={{ background: '#25D366', color: '#fff' }}
+        >
+          <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          Agendar por WhatsApp
+        </a>
+
+        {/* Accesos rápidos por servicio */}
+        <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-8">
+          <p className="text-sm uppercase tracking-widest mb-6 font-medium" style={{ color: 'var(--color-dorado)' }}>
+            ¿Sabes qué servicio quieres? Escríbenos directo
           </p>
-          <h3
-            className="text-5xl font-bold mb-4"
-            style={{ fontFamily: "'Playfair Display', serif", color: 'var(--color-negro)' }}
-          >
-            Agendar Cita
-          </h3>
-          <p className="text-xl" style={{ color: 'var(--color-gris-suave)' }}>
-            Elige la fecha y hora que mejor te convenga
-          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {SERVICIOS_POPULARES.map(servicio => (
+              <a
+                key={servicio}
+                href={buildWhatsAppUrl(servicio)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 hover:scale-105"
+                style={{
+                  borderColor: 'var(--color-dorado)',
+                  color: 'var(--color-dorado)',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = 'var(--color-dorado)';
+                  (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                  (e.currentTarget as HTMLAnchorElement).style.color = 'var(--color-dorado)';
+                }}
+              >
+                {servicio}
+              </a>
+            ))}
+          </div>
         </div>
 
-        {exito && (
-          <div className="mb-6 p-4 rounded-xl text-center border" style={{ background: '#f0fdf4', borderColor: '#86efac', color: '#166534' }}>
-            ✅ {exito.mensaje} — Reserva #{exito.id_trabajo}
-          </div>
-        )}
+        <p className="mt-8 text-sm" style={{ color: 'var(--color-gris-suave)' }}>
+          Horario de atención: Lunes a Sábado · 9:00 AM – 7:00 PM
+        </p>
 
-        {apiError && (
-          <div className="mb-6 p-4 rounded-xl text-center border" style={{ background: '#fef2f2', borderColor: '#fca5a5', color: '#991b1b' }}>
-            ⚠️ {apiError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5 bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
-          <div className="grid md:grid-cols-2 gap-4">
-            <input name="nombre" placeholder="Nombre" value={form.nombre} onChange={handleChange} required className={inputClass} style={focusStyle} />
-            <input name="apellido" placeholder="Apellido" value={form.apellido} onChange={handleChange} required className={inputClass} style={focusStyle} />
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} required className={inputClass} style={focusStyle} />
-            <input type="tel" name="telefono" placeholder="Teléfono" value={form.telefono} onChange={handleChange} required className={inputClass} style={focusStyle} />
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <select name="id_servicio" value={form.id_servicio} onChange={handleChange} required className={inputClass} style={focusStyle}>
-              <option value="">Selecciona un servicio</option>
-              {servicios.map(s => (
-                <option key={s.id_servicio} value={s.id_servicio}>{s.nombre} — Bs. {Number(s.precio).toFixed(2)}</option>
-              ))}
-            </select>
-            <select name="id_empleado" value={form.id_empleado} onChange={handleChange} required className={inputClass} style={focusStyle}>
-              <option value="">Selecciona un estilista</option>
-              {empleados.map(e => (
-                <option key={e.id_empleado} value={e.id_empleado}>{e.nombre} {e.apellido}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <input type="date" name="fecha_reserva" value={form.fecha_reserva} onChange={handleChange} required className={inputClass} style={focusStyle} />
-            <input type="time" name="hora_reserva" value={form.hora_reserva} onChange={handleChange} required className={inputClass} style={focusStyle} />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full font-bold py-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none text-white"
-            style={{ background: submitting ? 'var(--color-gris-suave)' : 'var(--color-dorado)', color: 'var(--color-negro)' }}
-          >
-            {submitting ? 'Agendando...' : 'Agendar Cita'}
-          </button>
-        </form>
       </div>
     </section>
   );

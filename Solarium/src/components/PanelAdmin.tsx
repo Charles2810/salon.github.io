@@ -32,7 +32,7 @@ function SkeletonRow() {
   );
 }
 
-export default function PanelAdmin() {
+export default function PanelAdmin({ onVerSitio }: { onVerSitio?: () => void }) {
   const { user, logout } = useAuth();
   const [reservas, setReservas] = useState<ReservaAdmin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,12 +81,22 @@ export default function PanelAdmin() {
           </h1>
           <p className="text-sm text-slate-500 capitalize">{user?.rol?.toLowerCase()}</p>
         </div>
-        <button
-          onClick={logout}
-          className="text-sm text-slate-500 hover:text-red-600 transition-colors"
-        >
-          Cerrar sesión
-        </button>
+        <div className="flex items-center gap-3">
+          {onVerSitio && (
+            <button
+              onClick={onVerSitio}
+              className="text-sm px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              🌐 Ver sitio
+            </button>
+          )}
+          <button
+            onClick={logout}
+            className="text-sm text-slate-500 hover:text-red-600 transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </header>
 
       {/* Contenido */}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import LoginForm from './LoginForm';
 
-export default function Navbar() {
+export default function Navbar({ onVolverPanel }: { onVolverPanel?: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const { user, logout } = useAuth();
@@ -38,6 +38,14 @@ export default function Navbar() {
               </a>
             </li>
             <li className="ml-2 flex items-center">
+              {onVolverPanel && (
+                <button
+                  onClick={onVolverPanel}
+                  className="mr-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 transition-colors duration-300 text-sm font-medium"
+                >
+                  ← Panel Admin
+                </button>
+              )}
               {user ? (
                 <button
                   onClick={logout}
