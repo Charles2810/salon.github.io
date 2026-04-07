@@ -2,8 +2,7 @@ USE [DB_TiendaBelleza];
 GO
 
 /* ================================================================
-   TRIGGERS — escriben en BITACORA
-   Regla: GO debe estar en su propia línea
+   TRIGGERS — escriben en BITACORA con nombres, no IDs
 ================================================================ */
 
 /* ---- RESPONSABLE: CH — CATEGORIAS ---- */
@@ -14,7 +13,9 @@ GO
 CREATE TRIGGER dbo.TR_CATEGORIAS_INSERT ON dbo.CATEGORIAS AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
-  SELECT 'CATEGORIAS', 'INSERT', 'Nueva categoría: ' + NOMBRE, SYSTEM_USER
+  SELECT 'CATEGORIAS', 'INSERT',
+    'Nueva categoría: ' + NOMBRE,
+    SYSTEM_USER
   FROM inserted;
 END
 GO
@@ -26,8 +27,7 @@ CREATE TRIGGER dbo.TR_CATEGORIAS_UPDATE ON dbo.CATEGORIAS AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'CATEGORIAS', 'UPDATE',
-    'Categoría id=' + CAST(d.ID_CATEGORIA AS VARCHAR) +
-    ' | Antes: ' + d.NOMBRE + ' → Después: ' + i.NOMBRE,
+    'Categoría "' + d.NOMBRE + '" → nombre: "' + i.NOMBRE + '" estado: ' + i.ESTADO,
     SYSTEM_USER
   FROM deleted d JOIN inserted i ON d.ID_CATEGORIA = i.ID_CATEGORIA;
 END
@@ -40,7 +40,7 @@ CREATE TRIGGER dbo.TR_CATEGORIAS_DELETE ON dbo.CATEGORIAS AFTER DELETE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'CATEGORIAS', 'DELETE',
-    'Categoría eliminada: ' + NOMBRE + ' (id=' + CAST(ID_CATEGORIA AS VARCHAR) + ')',
+    'Categoría eliminada: "' + NOMBRE + '"',
     SYSTEM_USER
   FROM deleted;
 END
@@ -55,9 +55,10 @@ CREATE TRIGGER dbo.TR_SERVICIOS_INSERT ON dbo.SERVICIOS AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'SERVICIOS', 'INSERT',
-    'Nuevo servicio: ' + NOMBRE + ' precio=' + CAST(PRECIO AS VARCHAR),
+    'Nuevo servicio: "' + i.NOMBRE + '" categoría: "' + ISNULL(c.NOMBRE,'?') + '" precio: Bs.' + CAST(i.PRECIO AS VARCHAR),
     SYSTEM_USER
-  FROM inserted;
+  FROM inserted i
+  LEFT JOIN CATEGORIAS c ON i.ID_CATEGORIA = c.ID_CATEGORIA;
 END
 GO
 
@@ -68,9 +69,8 @@ CREATE TRIGGER dbo.TR_SERVICIOS_UPDATE ON dbo.SERVICIOS AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'SERVICIOS', 'UPDATE',
-    'Servicio id=' + CAST(d.ID_SERVICIO AS VARCHAR) +
-    ' | Antes: ' + d.NOMBRE + ' $' + CAST(d.PRECIO AS VARCHAR) +
-    ' → Después: ' + i.NOMBRE + ' $' + CAST(i.PRECIO AS VARCHAR),
+    'Servicio "' + d.NOMBRE + '" → nombre: "' + i.NOMBRE +
+    '" precio: Bs.' + CAST(i.PRECIO AS VARCHAR) + ' estado: ' + i.ESTADO,
     SYSTEM_USER
   FROM deleted d JOIN inserted i ON d.ID_SERVICIO = i.ID_SERVICIO;
 END
@@ -83,7 +83,7 @@ CREATE TRIGGER dbo.TR_SERVICIOS_DELETE ON dbo.SERVICIOS AFTER DELETE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'SERVICIOS', 'DELETE',
-    'Servicio eliminado: ' + NOMBRE + ' (id=' + CAST(ID_SERVICIO AS VARCHAR) + ')',
+    'Servicio eliminado: "' + NOMBRE + '" precio: Bs.' + CAST(PRECIO AS VARCHAR),
     SYSTEM_USER
   FROM deleted;
 END
@@ -97,7 +97,9 @@ GO
 CREATE TRIGGER dbo.TR_CLIENTES_INSERT ON dbo.CLIENTES AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
-  SELECT 'CLIENTES', 'INSERT', 'Nuevo cliente: ' + NOMBRE + ' ' + APELLIDO, SYSTEM_USER
+  SELECT 'CLIENTES', 'INSERT',
+    'Nuevo cliente: ' + NOMBRE + ' ' + APELLIDO + ' tel: ' + ISNULL(TELEFONO,'—'),
+    SYSTEM_USER
   FROM inserted;
 END
 GO
@@ -109,9 +111,9 @@ CREATE TRIGGER dbo.TR_CLIENTES_UPDATE ON dbo.CLIENTES AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'CLIENTES', 'UPDATE',
-    'Cliente id=' + CAST(d.ID_CLIENTE AS VARCHAR) +
-    ' | Antes: ' + d.NOMBRE + ' ' + d.APELLIDO +
-    ' → Después: ' + i.NOMBRE + ' ' + i.APELLIDO,
+    'Cliente "' + d.NOMBRE + ' ' + d.APELLIDO +
+    '" → nombre: "' + i.NOMBRE + ' ' + i.APELLIDO +
+    '" tel: ' + ISNULL(i.TELEFONO,'—'),
     SYSTEM_USER
   FROM deleted d JOIN inserted i ON d.ID_CLIENTE = i.ID_CLIENTE;
 END
@@ -138,7 +140,9 @@ GO
 CREATE TRIGGER dbo.TR_ROLES_INSERT ON dbo.ROLES AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
-  SELECT 'ROLES', 'INSERT', 'Nuevo rol: ' + NOMBRE, SYSTEM_USER
+  SELECT 'ROLES', 'INSERT',
+    'Nuevo rol: "' + NOMBRE + '"',
+    SYSTEM_USER
   FROM inserted;
 END
 GO
@@ -150,8 +154,7 @@ CREATE TRIGGER dbo.TR_ROLES_UPDATE ON dbo.ROLES AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'ROLES', 'UPDATE',
-    'Rol id=' + CAST(d.ID_ROL AS VARCHAR) +
-    ' | Antes: ' + d.NOMBRE + ' → Después: ' + i.NOMBRE,
+    'Rol "' + d.NOMBRE + '" → nombre: "' + i.NOMBRE + '" estado: ' + i.ESTADO,
     SYSTEM_USER
   FROM deleted d JOIN inserted i ON d.ID_ROL = i.ID_ROL;
 END
@@ -163,7 +166,9 @@ GO
 CREATE TRIGGER dbo.TR_ROLES_DELETE ON dbo.ROLES AFTER DELETE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
-  SELECT 'ROLES', 'DELETE', 'Rol eliminado: ' + NOMBRE, SYSTEM_USER
+  SELECT 'ROLES', 'DELETE',
+    'Rol eliminado: "' + NOMBRE + '"',
+    SYSTEM_USER
   FROM deleted;
 END
 GO
@@ -177,9 +182,11 @@ CREATE TRIGGER dbo.TR_USUARIOS_INSERT ON dbo.USUARIOS AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'USUARIOS', 'INSERT',
-    'Nuevo usuario: ' + USUARIO + ' (' + NOMBRE + ' ' + APELLIDO + ')',
+    'Nuevo usuario: ' + i.NOMBRE + ' ' + i.APELLIDO +
+    ' usuario: "' + i.USUARIO + '" rol: "' + ISNULL(r.NOMBRE,'?') + '"',
     SYSTEM_USER
-  FROM inserted;
+  FROM inserted i
+  LEFT JOIN ROLES r ON i.ID_ROL = r.ID_ROL;
 END
 GO
 
@@ -190,11 +197,12 @@ CREATE TRIGGER dbo.TR_USUARIOS_UPDATE ON dbo.USUARIOS AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'USUARIOS', 'UPDATE',
-    'Usuario id=' + CAST(d.ID_USUARIO AS VARCHAR) +
-    ' | Antes: ' + d.USUARIO + ' estado=' + d.ESTADO +
-    ' → Después: ' + i.USUARIO + ' estado=' + i.ESTADO,
+    'Usuario "' + d.USUARIO + '" (' + d.NOMBRE + ' ' + d.APELLIDO + ')' +
+    ' → estado: ' + i.ESTADO + ' rol: "' + ISNULL(r.NOMBRE,'?') + '"',
     SYSTEM_USER
-  FROM deleted d JOIN inserted i ON d.ID_USUARIO = i.ID_USUARIO;
+  FROM deleted d
+  JOIN inserted i ON d.ID_USUARIO = i.ID_USUARIO
+  LEFT JOIN ROLES r ON i.ID_ROL = r.ID_ROL;
 END
 GO
 
@@ -205,7 +213,7 @@ CREATE TRIGGER dbo.TR_USUARIOS_DELETE ON dbo.USUARIOS AFTER DELETE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'USUARIOS', 'DELETE',
-    'Usuario eliminado: ' + USUARIO + ' (id=' + CAST(ID_USUARIO AS VARCHAR) + ')',
+    'Usuario eliminado: ' + NOMBRE + ' ' + APELLIDO + ' ("' + USUARIO + '")',
     SYSTEM_USER
   FROM deleted;
 END
@@ -220,10 +228,15 @@ CREATE TRIGGER dbo.TR_RESERVAS_INSERT ON dbo.RESERVAS AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'RESERVAS', 'INSERT',
-    'Nueva reserva id=' + CAST(ID_RESERVA AS VARCHAR) +
-    ' fecha=' + CONVERT(VARCHAR, FECHA_RESERVA, 23) + ' estado=' + ESTADO,
+    'Nueva reserva: cliente "' + ISNULL(c.NOMBRE+' '+c.APELLIDO,'?') +
+    '" servicio "' + ISNULL(s.NOMBRE,'?') +
+    '" fecha: ' + CONVERT(VARCHAR,i.FECHA_RESERVA,23) +
+    ' hora: ' + CONVERT(VARCHAR,i.HORA_RESERVA,8) +
+    ' estado: ' + i.ESTADO,
     SYSTEM_USER
-  FROM inserted;
+  FROM inserted i
+  LEFT JOIN CLIENTES  c ON i.ID_CLIENTE  = c.ID_CLIENTE
+  LEFT JOIN SERVICIOS s ON i.ID_SERVICIO = s.ID_SERVICIO;
 END
 GO
 
@@ -234,10 +247,15 @@ CREATE TRIGGER dbo.TR_RESERVAS_UPDATE ON dbo.RESERVAS AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'RESERVAS', 'UPDATE',
-    'Reserva id=' + CAST(d.ID_RESERVA AS VARCHAR) +
-    ' | Antes: estado=' + d.ESTADO + ' → Después: estado=' + i.ESTADO,
+    'Reserva cliente "' + ISNULL(c.NOMBRE+' '+c.APELLIDO,'?') +
+    '" servicio "' + ISNULL(s.NOMBRE,'?') +
+    '" fecha: ' + CONVERT(VARCHAR,i.FECHA_RESERVA,23) +
+    ' | estado: ' + d.ESTADO + ' → ' + i.ESTADO,
     SYSTEM_USER
-  FROM deleted d JOIN inserted i ON d.ID_RESERVA = i.ID_RESERVA;
+  FROM deleted d
+  JOIN inserted i ON d.ID_RESERVA = i.ID_RESERVA
+  LEFT JOIN CLIENTES  c ON i.ID_CLIENTE  = c.ID_CLIENTE
+  LEFT JOIN SERVICIOS s ON i.ID_SERVICIO = s.ID_SERVICIO;
 END
 GO
 
@@ -248,9 +266,13 @@ CREATE TRIGGER dbo.TR_RESERVAS_DELETE ON dbo.RESERVAS AFTER DELETE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'RESERVAS', 'DELETE',
-    'Reserva eliminada id=' + CAST(ID_RESERVA AS VARCHAR),
+    'Reserva eliminada: cliente "' + ISNULL(c.NOMBRE+' '+c.APELLIDO,'?') +
+    '" servicio "' + ISNULL(s.NOMBRE,'?') +
+    '" fecha: ' + CONVERT(VARCHAR,d.FECHA_RESERVA,23),
     SYSTEM_USER
-  FROM deleted;
+  FROM deleted d
+  LEFT JOIN CLIENTES  c ON d.ID_CLIENTE  = c.ID_CLIENTE
+  LEFT JOIN SERVICIOS s ON d.ID_SERVICIO = s.ID_SERVICIO;
 END
 GO
 
@@ -263,11 +285,14 @@ CREATE TRIGGER dbo.TR_TRABAJOS_INSERT ON dbo.TRABAJOS AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'TRABAJOS', 'INSERT',
-    'Nuevo trabajo id=' + CAST(ID_TRABAJO AS VARCHAR) +
-    ' reserva=' + CAST(ID_RESERVA AS VARCHAR) +
-    ' precio=' + CAST(PRECIO_COBRADO AS VARCHAR),
+    'Nuevo trabajo: servicio "' + ISNULL(s.NOMBRE,'?') +
+    '" atendido por "' + ISNULL(u.NOMBRE+' '+u.APELLIDO,'?') +
+    '" precio cobrado: Bs.' + CAST(i.PRECIO_COBRADO AS VARCHAR) +
+    ' estado: ' + i.ESTADO,
     SYSTEM_USER
-  FROM inserted;
+  FROM inserted i
+  LEFT JOIN SERVICIOS s ON i.ID_SERVICIO = s.ID_SERVICIO
+  LEFT JOIN USUARIOS  u ON i.ID_USUARIO  = u.ID_USUARIO;
 END
 GO
 
@@ -278,11 +303,13 @@ CREATE TRIGGER dbo.TR_TRABAJOS_UPDATE ON dbo.TRABAJOS AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'TRABAJOS', 'UPDATE',
-    'Trabajo id=' + CAST(d.ID_TRABAJO AS VARCHAR) +
-    ' | Antes: estado=' + d.ESTADO +
-    ' → Después: estado=' + i.ESTADO,
+    'Trabajo servicio "' + ISNULL(s.NOMBRE,'?') +
+    '" | estado: ' + d.ESTADO + ' → ' + i.ESTADO +
+    ' precio: Bs.' + CAST(i.PRECIO_COBRADO AS VARCHAR),
     SYSTEM_USER
-  FROM deleted d JOIN inserted i ON d.ID_TRABAJO = i.ID_TRABAJO;
+  FROM deleted d
+  JOIN inserted i ON d.ID_TRABAJO = i.ID_TRABAJO
+  LEFT JOIN SERVICIOS s ON i.ID_SERVICIO = s.ID_SERVICIO;
 END
 GO
 
@@ -293,9 +320,11 @@ CREATE TRIGGER dbo.TR_TRABAJOS_DELETE ON dbo.TRABAJOS AFTER DELETE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'TRABAJOS', 'DELETE',
-    'Trabajo eliminado id=' + CAST(ID_TRABAJO AS VARCHAR),
+    'Trabajo eliminado: servicio "' + ISNULL(s.NOMBRE,'?') +
+    '" precio: Bs.' + CAST(d.PRECIO_COBRADO AS VARCHAR),
     SYSTEM_USER
-  FROM deleted;
+  FROM deleted d
+  LEFT JOIN SERVICIOS s ON d.ID_SERVICIO = s.ID_SERVICIO;
 END
 GO
 
@@ -308,10 +337,17 @@ CREATE TRIGGER dbo.TR_PAGOS_INSERT ON dbo.PAGOS AFTER INSERT AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'PAGOS', 'INSERT',
-    'Nuevo pago id=' + CAST(ID_PAGO AS VARCHAR) +
-    ' monto=' + CAST(MONTO AS VARCHAR) + ' metodo=' + METODO_PAGO,
+    'Nuevo pago: cliente "' + ISNULL(c.NOMBRE+' '+c.APELLIDO,'?') +
+    '" servicio "' + ISNULL(s.NOMBRE,'?') +
+    '" monto: Bs.' + CAST(i.MONTO AS VARCHAR) +
+    ' método: ' + i.METODO_PAGO +
+    ' estado: ' + i.ESTADO,
     SYSTEM_USER
-  FROM inserted;
+  FROM inserted i
+  LEFT JOIN TRABAJOS t  ON i.ID_TRABAJO  = t.ID_TRABAJO
+  LEFT JOIN RESERVAS r  ON t.ID_RESERVA  = r.ID_RESERVA
+  LEFT JOIN CLIENTES c  ON r.ID_CLIENTE  = c.ID_CLIENTE
+  LEFT JOIN SERVICIOS s ON r.ID_SERVICIO = s.ID_SERVICIO;
 END
 GO
 
@@ -322,11 +358,15 @@ CREATE TRIGGER dbo.TR_PAGOS_UPDATE ON dbo.PAGOS AFTER UPDATE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'PAGOS', 'UPDATE',
-    'Pago id=' + CAST(d.ID_PAGO AS VARCHAR) +
-    ' | Antes: monto=' + CAST(d.MONTO AS VARCHAR) + ' estado=' + d.ESTADO +
-    ' → Después: monto=' + CAST(i.MONTO AS VARCHAR) + ' estado=' + i.ESTADO,
+    'Pago cliente "' + ISNULL(c.NOMBRE+' '+c.APELLIDO,'?') +
+    '" | monto: Bs.' + CAST(d.MONTO AS VARCHAR) + ' → Bs.' + CAST(i.MONTO AS VARCHAR) +
+    ' estado: ' + d.ESTADO + ' → ' + i.ESTADO,
     SYSTEM_USER
-  FROM deleted d JOIN inserted i ON d.ID_PAGO = i.ID_PAGO;
+  FROM deleted d
+  JOIN inserted i ON d.ID_PAGO = i.ID_PAGO
+  LEFT JOIN TRABAJOS t  ON i.ID_TRABAJO  = t.ID_TRABAJO
+  LEFT JOIN RESERVAS r  ON t.ID_RESERVA  = r.ID_RESERVA
+  LEFT JOIN CLIENTES c  ON r.ID_CLIENTE  = c.ID_CLIENTE;
 END
 GO
 
@@ -337,11 +377,11 @@ CREATE TRIGGER dbo.TR_PAGOS_DELETE ON dbo.PAGOS AFTER DELETE AS
 BEGIN
   INSERT INTO BITACORA (TABLA, ACCION, DESCRIPCION, USUARIO_SISTEMA)
   SELECT 'PAGOS', 'DELETE',
-    'Pago eliminado id=' + CAST(ID_PAGO AS VARCHAR) +
-    ' monto=' + CAST(MONTO AS VARCHAR),
+    'Pago eliminado: monto Bs.' + CAST(MONTO AS VARCHAR) +
+    ' método: ' + METODO_PAGO,
     SYSTEM_USER
   FROM deleted;
 END
 GO
 
-PRINT '✅ Triggers aplicados correctamente.';
+PRINT '✅ Triggers con nombres aplicados correctamente.';

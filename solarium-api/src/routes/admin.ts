@@ -5,7 +5,7 @@ import {
   listarReservasHoy,
   listarCategorias, crearCategoria, actualizarCategoria, desactivarCategoria,
   listarServiciosAdmin, crearServicio, actualizarServicio, desactivarServicio,
-  listarClientesAdmin,
+  listarClientesAdmin, crearCliente, actualizarCliente, eliminarCliente, historialCliente,
   listarUsuariosAdmin,
   listarReservasAdmin, crearReservaAdmin, cancelarReserva,
   crearTrabajo,
@@ -35,7 +35,11 @@ router.put('/servicios/:id', ...auth, actualizarServicio);
 router.delete('/servicios/:id', ...auth, desactivarServicio);
 
 // Clientes
-router.get('/clientes', ...auth, listarClientesAdmin);
+router.get('/clientes',               ...auth, listarClientesAdmin);
+router.post('/clientes',              ...auth, crearCliente);
+router.put('/clientes/:id',           ...auth, actualizarCliente);
+router.delete('/clientes/:id',        ...auth, eliminarCliente);
+router.get('/clientes/:id/historial', ...auth, historialCliente);
 
 // Usuarios
 router.get('/usuarios', ...auth, listarUsuariosAdmin);

@@ -186,20 +186,118 @@ export async function desactivarServicio(req: Request, res: Response): Promise<v
 // ── CLIENTES ──────────────────────────────────────────────────────────────────
 export async function listarClientesAdmin(req: Request, res: Response): Promise<void> {
   const { page, pageSize, offset } = paged(req);
+  const q = req.query.q as string | undefined;
   try {
     const pool = await getPool();
+    const whereClause = q ? `WHERE NOMBRE LIKE @q OR APELLIDO LIKE @q OR CORREO LIKE @q` : '';
     const [rows, cnt] = await Promise.all([
-      pool.request().input('offset', sql.Int, offset).input('pageSize', sql.Int, pageSize).query(`
-        SELECT ID_CLIENTE AS id_cliente, NOMBRE AS nombre, APELLIDO AS apellido,
-               TELEFONO AS telefono, CORREO AS correo
-        FROM CLIENTES ORDER BY NOMBRE
-        OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
-      `),
-      pool.request().query('SELECT COUNT(*) AS total FROM CLIENTES'),
+      pool.request()
+        .input('offset', sql.Int, offset)
+        .input('pageSize', sql.Int, pageSize)
+        .input('q', sql.VarChar(100), q ? `%${q}%` : '%')
+        .query(`
+          SELECT ID_CLIENTE AS id_cliente, NOMBRE AS nombre, APELLIDO AS apellido,
+                 TELEFONO AS telefono, CORREO AS correo
+          FROM CLIENTES
+          ${whereClause}
+          ORDER BY NOMBRE
+          OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY
+        `),
+      pool.request()
+        .input('q', sql.VarChar(100), q ? `%${q}%` : '%')
+        .query(`SELECT COUNT(*) AS total FROM CLIENTES ${whereClause}`),
     ]);
     res.json({ data: rows.recordset, page, pageSize, total: cnt.recordset[0].total });
   } catch (err) {
     console.error('listarClientesAdmin:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function crearCliente(req: Request, res: Response): Promise<void> {
+  const { nombre, apellido, telefono, correo } = req.body;
+  if (!nombre?.trim() || !apellido?.trim()) {
+    res.status(400).json({ error: 'Nombre y apellido son requeridos' }); return;
+  }
+  try {
+    const pool = await getPool();
+    const r = await pool.request()
+      .input('nombre',   sql.VarChar(100), nombre.trim())
+      .input('apellido', sql.VarChar(100), apellido.trim())
+      .input('telefono', sql.VarChar(20),  telefono?.trim() || null)
+      .input('correo',   sql.VarChar(100), correo?.trim() || null)
+      .query(`
+        INSERT INTO CLIENTES (NOMBRE, APELLIDO, TELEFONO, CORREO)
+        VALUES (@nombre, @apellido, @telefono, @correo);
+        SELECT SCOPE_IDENTITY() AS id_cliente;
+      `);
+    res.status(201).json({ id_cliente: r.recordset[0].id_cliente, mensaje: 'Cliente creado' });
+  } catch (err) {
+    console.error('crearCliente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function actualizarCliente(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id);
+  const { nombre, apellido, telefono, correo } = req.body;
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id',       sql.Int,          id)
+      .input('nombre',   sql.VarChar(100), nombre?.trim())
+      .input('apellido', sql.VarChar(100), apellido?.trim())
+      .input('telefono', sql.VarChar(20),  telefono?.trim() || null)
+      .input('correo',   sql.VarChar(100), correo?.trim() || null)
+      .query(`UPDATE CLIENTES SET NOMBRE=@nombre, APELLIDO=@apellido, TELEFONO=@telefono, CORREO=@correo WHERE ID_CLIENTE=@id`);
+    res.json({ mensaje: 'Cliente actualizado' });
+  } catch (err) {
+    console.error('actualizarCliente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function eliminarCliente(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id);
+  try {
+    const pool = await getPool();
+    // Verificar si tiene reservas asociadas
+    const check = await pool.request().input('id', sql.Int, id)
+      .query('SELECT COUNT(*) AS total FROM RESERVAS WHERE ID_CLIENTE = @id');
+    if (check.recordset[0].total > 0) {
+      res.status(409).json({ error: 'No se puede eliminar: el cliente tiene reservas asociadas' });
+      return;
+    }
+    await pool.request().input('id', sql.Int, id)
+      .query('DELETE FROM CLIENTES WHERE ID_CLIENTE = @id');
+    res.status(204).send();
+  } catch (err) {
+    console.error('eliminarCliente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function historialCliente(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id);
+  try {
+    const pool = await getPool();
+    const r = await pool.request().input('id', sql.Int, id).query(`
+      SELECT
+        r.ID_RESERVA AS id_reserva,
+        CONVERT(VARCHAR, r.FECHA_RESERVA, 23) AS fecha_reserva,
+        CONVERT(VARCHAR, r.HORA_RESERVA, 8)   AS hora_reserva,
+        r.ESTADO AS estado,
+        s.NOMBRE AS servicio,
+        u.NOMBRE + ' ' + u.APELLIDO AS usuario
+      FROM RESERVAS r
+      JOIN SERVICIOS s ON r.ID_SERVICIO = s.ID_SERVICIO
+      JOIN USUARIOS  u ON r.ID_USUARIO  = u.ID_USUARIO
+      WHERE r.ID_CLIENTE = @id
+      ORDER BY r.FECHA_RESERVA DESC, r.HORA_RESERVA DESC
+    `);
+    res.json(r.recordset);
+  } catch (err) {
+    console.error('historialCliente:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
