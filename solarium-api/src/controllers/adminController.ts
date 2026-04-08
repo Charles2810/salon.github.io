@@ -346,7 +346,7 @@ export async function listarReservasAdmin(req: Request, res: Response): Promise<
                  CONVERT(VARCHAR,r.HORA_RESERVA,8) AS hora_reserva,
                  r.ESTADO AS estado, r.OBSERVACION AS observacion,
                  t.ID_TRABAJO AS id_trabajo, t.ESTADO AS estado_trabajo,
-                 p.ID_PAGO AS id_pago, p.ESTADO AS estado_pago
+                 p.ID_PAGO AS id_pago, p.ESTADO AS estado_pago, p.MONTO AS monto_pago
           FROM RESERVAS r
           JOIN CLIENTES c  ON r.ID_CLIENTE=c.ID_CLIENTE
           JOIN SERVICIOS s ON r.ID_SERVICIO=s.ID_SERVICIO
@@ -379,7 +379,7 @@ export async function crearReservaAdmin(req: Request, res: Response): Promise<vo
       .input('id_servicio', sql.Int, id_servicio)
       .input('id_usuario', sql.Int, id_usuario)
       .input('fecha_reserva', sql.Date, fecha_reserva)
-      .input('hora_reserva', sql.VarChar(8), hora_reserva)
+      .input('hora_reserva', sql.VarChar(8), hora_reserva?.length === 5 ? `${hora_reserva}:00` : hora_reserva)
       .input('observacion', sql.VarChar(255), observacion || null)
       .query(`
         INSERT INTO RESERVAS (ID_CLIENTE,ID_SERVICIO,ID_USUARIO,FECHA_RESERVA,HORA_RESERVA,ESTADO,OBSERVACION)
@@ -402,6 +402,75 @@ export async function cancelarReserva(req: Request, res: Response): Promise<void
     res.json({ mensaje: 'Reserva cancelada' });
   } catch (err) {
     console.error('cancelarReserva:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function editarReserva(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id);
+  const { id_cliente, id_servicio, id_usuario, fecha_reserva, hora_reserva, observacion, estado } = req.body;
+  try {
+    const pool = await getPool();
+    // Normalizar hora a HH:MM:SS
+    const hora = hora_reserva?.length === 5 ? `${hora_reserva}:00` : hora_reserva;
+    await pool.request()
+      .input('id',           sql.Int,         id)
+      .input('id_cliente',   sql.Int,         id_cliente)
+      .input('id_servicio',  sql.Int,         id_servicio)
+      .input('id_usuario',   sql.Int,         id_usuario)
+      .input('fecha_reserva',sql.Date,        fecha_reserva)
+      .input('hora_reserva', sql.VarChar(8),  hora)
+      .input('observacion',  sql.VarChar(255),observacion || null)
+      .input('estado',       sql.VarChar(20), estado || 'PENDIENTE')
+      .query(`
+        UPDATE RESERVAS SET
+          ID_CLIENTE=@id_cliente, ID_SERVICIO=@id_servicio, ID_USUARIO=@id_usuario,
+          FECHA_RESERVA=@fecha_reserva, HORA_RESERVA=@hora_reserva,
+          OBSERVACION=@observacion, ESTADO=@estado
+        WHERE ID_RESERVA=@id
+      `);
+    res.json({ mensaje: 'Reserva actualizada' });
+  } catch (err) {
+    console.error('editarReserva:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function editarTrabajo(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id);
+  const { estado, observacion, precio_cobrado } = req.body;
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id',            sql.Int,          id)
+      .input('estado',        sql.VarChar(20),  estado)
+      .input('observacion',   sql.VarChar(255), observacion || null)
+      .input('precio_cobrado',sql.Decimal(10,2),precio_cobrado)
+      .query(`
+        UPDATE TRABAJOS SET ESTADO=@estado, OBSERVACION=@observacion, PRECIO_COBRADO=@precio_cobrado
+        WHERE ID_TRABAJO=@id
+      `);
+    res.json({ mensaje: 'Trabajo actualizado' });
+  } catch (err) {
+    console.error('editarTrabajo:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function editarPago(req: Request, res: Response): Promise<void> {
+  const id = parseInt(req.params.id);
+  const { monto, metodo_pago, estado } = req.body;
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('id',          sql.Int,          id)
+      .input('monto',       sql.Decimal(10,2),monto)
+      .input('metodo_pago', sql.VarChar(30),  metodo_pago)
+      .input('estado',      sql.VarChar(20),  estado)
+      .query(`UPDATE PAGOS SET MONTO=@monto, METODO_PAGO=@metodo_pago, ESTADO=@estado WHERE ID_PAGO=@id`);
+    res.json({ mensaje: 'Pago actualizado' });
+  } catch (err) {
+    console.error('editarPago:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
@@ -525,6 +594,7 @@ export async function bitacoraReciente(_req: Request, res: Response): Promise<vo
         NULL AS id_registro,
         DESCRIPCION AS descripcion,
         NULL AS actor_id_usuario,
+        USUARIO_SISTEMA AS usuario_sistema,
         CONVERT(VARCHAR, FECHA, 120) AS fecha
       FROM BITACORA
       ORDER BY FECHA DESC
@@ -541,7 +611,12 @@ export async function bitacoraActividadDia(req: Request, res: Response): Promise
   try {
     const pool = await getPool();
     const r = await pool.request().input('days', sql.Int, days).query(`
-      SELECT CONVERT(VARCHAR, CAST(FECHA AS DATE), 23) AS dia, COUNT(*) AS total
+      SELECT
+        CONVERT(VARCHAR, CAST(FECHA AS DATE), 23) AS dia,
+        COUNT(*) AS total,
+        SUM(CASE WHEN ACCION='INSERT' THEN 1 ELSE 0 END) AS [insert],
+        SUM(CASE WHEN ACCION='UPDATE' THEN 1 ELSE 0 END) AS [update],
+        SUM(CASE WHEN ACCION='DELETE' THEN 1 ELSE 0 END) AS [delete]
       FROM BITACORA
       WHERE FECHA >= DATEADD(DAY, -@days, GETDATE())
       GROUP BY CAST(FECHA AS DATE)

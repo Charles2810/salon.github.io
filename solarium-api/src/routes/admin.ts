@@ -7,9 +7,9 @@ import {
   listarServiciosAdmin, crearServicio, actualizarServicio, desactivarServicio,
   listarClientesAdmin, crearCliente, actualizarCliente, eliminarCliente, historialCliente,
   listarUsuariosAdmin,
-  listarReservasAdmin, crearReservaAdmin, cancelarReserva,
-  crearTrabajo,
-  crearPago, listarMetodosPago,
+  listarReservasAdmin, crearReservaAdmin, cancelarReserva, editarReserva,
+  crearTrabajo, editarTrabajo,
+  crearPago, editarPago, listarMetodosPago,
   bitacoraKpis, bitacoraReciente, bitacoraActividadDia,
   listarStoredProcedures,
   reporteReservas, reporteUsuarios, reportePagos, reporteServicios,
@@ -59,16 +59,19 @@ router.get('/roles', ...auth, async (_req, res) => {
 });
 
 // Reservas admin (con filtro fecha)
-router.get('/reservas-admin', ...auth, listarReservasAdmin);
-router.post('/reservas', ...auth, crearReservaAdmin);
+router.get('/reservas-admin',          ...auth, listarReservasAdmin);
+router.post('/reservas',               ...auth, crearReservaAdmin);
+router.put('/reservas/:id',            ...auth, editarReserva);
 router.patch('/reservas/:id/cancelar', ...auth, cancelarReserva);
 
 // Trabajos
-router.post('/trabajos', ...auth, crearTrabajo);
+router.post('/trabajos',     ...auth, crearTrabajo);
+router.put('/trabajos/:id',  ...auth, editarTrabajo);
 
 // Pagos
-router.get('/metodos-pago', ...auth, listarMetodosPago);
-router.post('/pagos', ...auth, crearPago);
+router.get('/metodos-pago',  ...auth, listarMetodosPago);
+router.post('/pagos',        ...auth, crearPago);
+router.put('/pagos/:id',     ...auth, editarPago);
 
 // Bitácora — solo ADMIN
 router.get('/bitacora/kpis', ...adminOnly, bitacoraKpis);

@@ -44,7 +44,7 @@ export async function crearReserva(req: Request, res: Response): Promise<void> {
       .input('id_servicio',   sql.Int,         id_servicio)
       .input('id_usuario',    sql.Int,         id_empleado)
       .input('fecha_reserva', sql.Date,        fecha_reserva)
-      .input('hora_reserva',  sql.VarChar(8),  hora_reserva)
+      .input('hora_reserva',  sql.VarChar(8),  hora_reserva?.length === 5 ? `${hora_reserva}:00` : hora_reserva)
       .input('observacion',   sql.VarChar(255), observaciones ?? null)
       .query(`
         INSERT INTO RESERVAS (ID_CLIENTE, ID_SERVICIO, ID_USUARIO, FECHA_RESERVA, HORA_RESERVA, ESTADO, OBSERVACION)
